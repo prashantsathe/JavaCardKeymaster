@@ -667,22 +667,24 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     // Argument 3 Vendor Patch level
     // Array of expected arguments
     short argsProto = KMArray.instance((short) 3);
-    KMArray.cast(argsProto).add((short) 0, KMInteger.exp());
-    KMArray.cast(argsProto).add((short) 1, KMInteger.exp());
-    KMArray.cast(argsProto).add((short) 2, KMInteger.exp());
+    KMArray argsArr = KMArray.cast(argsProto);
+    argsArr.add((short) 0, KMInteger.exp());
+    argsArr.add((short) 1, KMInteger.exp());
+    argsArr.add((short) 2, KMInteger.exp());
     // Decode the arguments
     short args = decoder.decode(argsProto, (byte[]) bufferRef[0], bufferProp[BUF_START_OFFSET], bufferProp[BUF_LEN_OFFSET]);
     //reclaim memory
     repository.reclaimMemory(bufferProp[BUF_LEN_OFFSET]);
+    KMArray argsObj = KMArray.cast(args);
+    tmpVariables[0] = argsObj.get((short) 0);
+    tmpVariables[1] = argsObj.get((short) 1);
+    tmpVariables[2] = argsObj.get((short) 2);
 
-    tmpVariables[0] = KMArray.cast(args).get((short) 0);
-    tmpVariables[1] = KMArray.cast(args).get((short) 1);
-    tmpVariables[2] = KMArray.cast(args).get((short) 2);
-
+    KMInteger intObj = KMInteger.cast(tmpVariables[0]);
     repository.setOsVersion(
-      KMInteger.cast(tmpVariables[0]).getBuffer(),
-      KMInteger.cast(tmpVariables[0]).getStartOff(),
-      KMInteger.cast(tmpVariables[0]).length());
+    		intObj.getBuffer(),
+    		intObj.getStartOff(),
+    		intObj.length());
 
     repository.setOsPatch(
       KMInteger.cast(tmpVariables[1]).getBuffer(),
@@ -695,6 +697,12 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
       KMInteger.cast(tmpVariables[2]).length());
 
     sendError(apdu, KMError.OK);
+  }
+
+  public short getCertChainExt(byte[] buffer, short startOffset) {
+	  short certChainLength = seProvider.getCertificateChainLength();
+	  seProvider.readCertificateChain(buffer, startOffset);
+	  return certChainLength;
   }
 
   private void processGetCertChainCmd(APDU apdu) {
@@ -712,7 +720,8 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     // read the cert chain from non-volatile memory. Cert chain is already in
     // CBOR format.
     seProvider.readCertificateChain((byte[]) bufferRef[0], (short) (bufferProp[BUF_START_OFFSET] + tmpVariables[2]));
-    // Encode cert chain.
+
+    //Encode cert chain.
     encoder.encodeCertChain((byte[]) bufferRef[0], bufferProp[BUF_START_OFFSET], bufferProp[BUF_LEN_OFFSET], int32Ptr);
     sendOutgoing(apdu);
   }
@@ -1251,18 +1260,19 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     tmpVariables[1] = KMArray.instance((short) 12);
     // Arguments
     tmpVariables[2] = KMKeyParameters.exp();
-    KMArray.cast(tmpVariables[1]).add((short) 0, tmpVariables[2]); // Key Params of wrapped key
-    KMArray.cast(tmpVariables[1]).add((short) 1, KMEnum.instance(KMType.KEY_FORMAT)); // Key Format
-    KMArray.cast(tmpVariables[1]).add((short) 2, KMByteBlob.exp()); // Wrapped Import Key Blob
-    KMArray.cast(tmpVariables[1]).add((short) 3, KMByteBlob.exp()); // Auth Tag
-    KMArray.cast(tmpVariables[1]).add((short) 4, KMByteBlob.exp()); // IV - Nonce
-    KMArray.cast(tmpVariables[1]).add((short) 5, KMByteBlob.exp()); // Encrypted Transport Key
-    KMArray.cast(tmpVariables[1]).add((short) 6, KMByteBlob.exp()); // Wrapping Key KeyBlob
-    KMArray.cast(tmpVariables[1]).add((short) 7, KMByteBlob.exp()); // Masking Key
-    KMArray.cast(tmpVariables[1]).add((short) 8, tmpVariables[2]); // Un-wrapping Params
-    KMArray.cast(tmpVariables[1]).add((short) 9, KMByteBlob.exp()); // Wrapped Key ASSOCIATED AUTH DATA
-    KMArray.cast(tmpVariables[1]).add((short) 10, KMInteger.exp()); // Password Sid
-    KMArray.cast(tmpVariables[1]).add((short) 11, KMInteger.exp()); // Biometric Sid
+    KMArray array = KMArray.cast(tmpVariables[1]);
+    array.add((short) 0, tmpVariables[2]); // Key Params of wrapped key
+    array.add((short) 1, KMEnum.instance(KMType.KEY_FORMAT)); // Key Format
+    array.add((short) 2, KMByteBlob.exp()); // Wrapped Import Key Blob
+    array.add((short) 3, KMByteBlob.exp()); // Auth Tag
+    array.add((short) 4, KMByteBlob.exp()); // IV - Nonce
+    array.add((short) 5, KMByteBlob.exp()); // Encrypted Transport Key
+    array.add((short) 6, KMByteBlob.exp()); // Wrapping Key KeyBlob
+    array.add((short) 7, KMByteBlob.exp()); // Masking Key
+    array.add((short) 8, tmpVariables[2]); // Un-wrapping Params
+    array.add((short) 9, KMByteBlob.exp()); // Wrapped Key ASSOCIATED AUTH DATA
+    array.add((short) 10, KMInteger.exp()); // Password Sid
+    array.add((short) 11, KMInteger.exp()); // Biometric Sid
     // Decode the arguments
     short args = decoder.decode(tmpVariables[1], (byte[]) bufferRef[0], bufferProp[BUF_START_OFFSET], bufferProp[BUF_LEN_OFFSET]);
     //reclaim memory
@@ -1270,11 +1280,10 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
 
     // Step -0 - check whether the key format and algorithm supported
     // read algorithm
-    tmpVariables[0] = KMArray.cast(args).get((short) 0);
-    tmpVariables[1] = KMEnumTag.getValue(KMType.ALGORITHM, tmpVariables[0]);
+    KMArray argsArray = KMArray.cast(args);
+    tmpVariables[1] = KMEnumTag.getValue(KMType.ALGORITHM, argsArray.get((short) 0));
     // read key format
-    tmpVariables[2] = KMArray.cast(args).get((short) 1);
-    tmpVariables[2] = KMEnum.cast(tmpVariables[2]).getVal();
+    tmpVariables[2] = KMEnum.cast(argsArray.get((short) 1)).getVal();
     // import of RSA and EC not supported with pkcs8 or x509 format
     if ((tmpVariables[1] == KMType.RSA || tmpVariables[1] == KMType.EC)
         && (tmpVariables[2] != KMType.RAW)) {
@@ -1283,9 +1292,9 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
 
     // Step -1 parse the wrapping key blob
     // read wrapping key blob
-    data[KEY_BLOB] = KMArray.cast(args).get((short) 6);
+    data[KEY_BLOB] = argsArray.get((short) 6);
     // read un wrapping key params
-    data[KEY_PARAMETERS] = KMArray.cast(args).get((short) 8);
+    data[KEY_PARAMETERS] = argsArray.get((short) 8);
     // Read App Id and App Data if any from un wrapping key params
     data[APP_ID] =
         KMKeyParameters.findTag(KMType.BYTES_TAG, KMType.APPLICATION_ID, data[KEY_PARAMETERS]);
@@ -1355,10 +1364,11 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     }
 
     // Step 4 - AES-GCM decrypt the wrapped key
-    data[INPUT_DATA] = KMArray.cast(args).get((short) 2);
-    data[AUTH_DATA] = KMArray.cast(args).get((short) 9);
-    data[AUTH_TAG] = KMArray.cast(args).get((short) 3);
-    data[NONCE] = KMArray.cast(args).get((short) 4);
+    argsArray = KMArray.cast(args);
+    data[INPUT_DATA] = argsArray.get((short) 2);
+    data[AUTH_DATA] = argsArray.get((short) 9);
+    data[AUTH_TAG] = argsArray.get((short) 3);
+    data[NONCE] = argsArray.get((short) 4);
     Util.arrayFillNonAtomic(
         scratchPad, (short) 0, KMByteBlob.cast(data[INPUT_DATA]).length(), (byte) 0);
 
@@ -1453,7 +1463,7 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     sendOutgoing(apdu);
   }
 
-  public short createAttestationForEcPublicKey(
+  public short createAttestationForEcPublicKey(boolean isTestCredential,
 		  byte[] argsBuff,
 		  short pubKeyOffset, short pubKeyLen,
 		  short attAppIdOffset, short attAppIdLen,
@@ -1461,12 +1471,16 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
 		  short activeDateTimeOffset, short activeDateTimeLen,
 		  short expireDateTimeOffset, short expireDateTimeLen,
 		  byte[] scratchPad, short scratchPadOffset) {
-	  short arrPtr = KMArray.instance((short)8);
+	  short hwParamCount = (short)8;
+	  if(!isTestCredential) {
+		  hwParamCount++;
+	  }
+	  short arrPtr = KMArray.instance(hwParamCount);
 	  KMArray hwParams = KMArray.cast(arrPtr);
 	  short tagIndex = 0;
 
 	  short byteBlob = KMByteBlob.instance((short) 1);
-	  KMByteBlob.cast(KMByteBlob.instance((short) 1)).add((short) 0, KMType.SIGN);
+	  KMByteBlob.cast(byteBlob).add((short) 0, KMType.SIGN);
 	  hwParams.add(tagIndex++, KMEnumArrayTag.instance(KMType.PURPOSE, byteBlob));
 	  hwParams.add(tagIndex++, KMIntegerTag.instance(KMType.UINT_TAG, KMType.KEYSIZE, KMInteger.uint_16((short) 256)));
 	  hwParams.add(tagIndex++, KMEnumTag.instance(KMType.ALGORITHM, KMType.EC));
@@ -1477,8 +1491,10 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
 	  hwParams.add(tagIndex++, KMEnumTag.instance(KMType.ECCURVE, KMType.P_256));
 	  hwParams.add(tagIndex++, KMIntegerTag.instance(KMType.UINT_TAG, KMType.OS_VERSION, KMRepository.instance().getOsVersion()));
 	  hwParams.add(tagIndex++, KMIntegerTag.instance(KMType.UINT_TAG, KMType.OS_PATCH_LEVEL, KMRepository.instance().getOsPatch()));
+	  if(!isTestCredential) {
+		  hwParams.add(tagIndex++, KMBoolTag.instance(KMType.IDENTITY_CREDENTIAL_KEY));
+	  }
 
-//TODO add TAG_IDENTITY_CREDENTIAL_KEY
 	  data[HW_PARAMETERS] = KMKeyParameters.instance(arrPtr);
 
 	  arrPtr = KMArray.instance((short)2);

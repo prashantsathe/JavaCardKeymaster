@@ -468,6 +468,7 @@ public class KMAttestationCertImpl implements KMAttestationCert {
     short last = stackPtr;
     // Below are the allowed hardwareEnforced Authorization tags inside the attestation certificate's extension.
     short[] tagIds = {
+        KMType.IDENTITY_CREDENTIAL_KEY,
         KMType.BOOT_PATCH_LEVEL, KMType.VENDOR_PATCH_LEVEL,
         KMType.ATTESTATION_ID_MODEL, KMType.ATTESTATION_ID_MANUFACTURER,
         KMType.ATTESTATION_ID_MEID, KMType.ATTESTATION_ID_IMEI,

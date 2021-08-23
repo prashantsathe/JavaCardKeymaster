@@ -33,7 +33,7 @@ public class KMRepository implements KMUpgradable {
   public static final short DATA_INDEX_SIZE = 22;
   public static final short DATA_INDEX_ENTRY_SIZE = 4;
   public static final short DATA_MEM_SIZE = 2048;
-  public static final short HEAP_SIZE = 6000;
+  public static final short HEAP_SIZE = 5000;
   public static final short DATA_INDEX_ENTRY_LENGTH = 0;
   public static final short DATA_INDEX_ENTRY_OFFSET = 2;
   public static final short OPERATION_HANDLE_SIZE = 8; /* 8 bytes */

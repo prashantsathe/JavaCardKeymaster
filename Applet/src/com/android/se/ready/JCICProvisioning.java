@@ -285,10 +285,7 @@ final class JCICProvisioning {
         intSize = mCBORDecoder.getIntegerSize();
         ICUtil.readUInt(mCBORDecoder, tempBuffer, (short)(expireTimeOffset + LONG_SIZE - intSize));
         short pubKeyOffset = (short)(expireTimeOffset + LONG_SIZE);
-        //expireTime set after 1 year
-        ICUtil.incrementByteArray(tempBuffer, expireTimeOffset, LONG_SIZE, tempBuffer, nowMsOffset, LONG_SIZE);
-        ICUtil.incrementByteArray(tempBuffer, expireTimeOffset, LONG_SIZE, ONE_YEAR_MS, (short)0, (byte)ONE_YEAR_MS.length);
-        
+
         mCryptoManager.createEcKeyPairAndAttestation(mCryptoManager.getStatusFlag(CryptoManager.FLAG_TEST_CREDENTIAL),
         		tempBuffer, challengeOffset, challengeLen,
         		appIdOffset, appIdLen,
@@ -297,21 +294,19 @@ final class JCICProvisioning {
         		receiveBuffer, (short)0);
         short pubKeyLen = mCryptoManager.getCredentialEcPubKey(tempBuffer, pubKeyOffset);
         
-        short certLen = KMAndroidSEApplet.getInstance().createAttestationForEcPublicKey(
+        short certLen = KMAndroidSEApplet.getInstance().createAttestationForEcPublicKey(mCryptoManager.getStatusFlag(CryptoManager.FLAG_TEST_CREDENTIAL),
         			tempBuffer, pubKeyOffset, pubKeyLen,
         			appIdOffset, appIdLen,
         			challengeOffset, challengeLen,
         			nowMsOffset, LONG_SIZE,
         			expireTimeOffset, LONG_SIZE,
-        			receiveBuffer, (short)0);
-
-        mCryptoManager.setStatusFlag(CryptoManager.FLAG_PROVISIONING_KEYS_INITIALIZED, true);
-
+        			outBuffer, (short)0);
+        Util.arrayCopyNonAtomic(outBuffer, (short)0, tempBuffer, (short)0, certLen);
         mCBOREncoder.init(outBuffer, (short) 0, le);
         mCBOREncoder.startArray((short)2);
         mCBOREncoder.encodeUInt8((byte)0); //Success
         mCBOREncoder.startArray((short)1);
-        mCBOREncoder.encodeByteString(receiveBuffer, (short)0, certLen);
+        mCBOREncoder.encodeByteString(tempBuffer, (short)0, certLen);
         return mCBOREncoder.getCurrentOffset();
 	}
 	

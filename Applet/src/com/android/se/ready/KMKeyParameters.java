@@ -165,7 +165,8 @@ public class KMKeyParameters extends KMType {
         KMType.BOOL_TAG, KMType.ROLLBACK_RESISTANCE,
         KMType.ENUM_TAG, KMType.USER_AUTH_TYPE,
         KMType.BOOL_TAG, KMType.UNLOCKED_DEVICE_REQUIRED,
-        KMType.BOOL_TAG, KMType.RESET_SINCE_ID_ROTATION
+        KMType.BOOL_TAG, KMType.RESET_SINCE_ID_ROTATION,
+        KMType.BOOL_TAG, KMType.IDENTITY_CREDENTIAL_KEY
     };
     byte index = 0;
     short tagInd;

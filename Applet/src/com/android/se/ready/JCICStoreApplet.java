@@ -85,6 +85,9 @@ public class JCICStoreApplet extends Applet implements ExtendedLength {
 	            case ISO7816.INS_ICS_GET_HARDWARE_INFO:
 	                processGetHardwareInfo();
 	                break;
+	            case ISO7816.INS_ICS_GET_ATTEST_CERT_CHAIN:
+	                processGetAttestCertChain();
+	                break;
 	            case ISO7816.INS_ICS_PROVISIONING_INIT:
 	            case ISO7816.INS_ICS_CREATE_CREDENTIAL_KEY:
 	            case ISO7816.INS_ICS_START_PERSONALIZATION:
@@ -221,4 +224,21 @@ public class JCICStoreApplet extends Applet implements ExtendedLength {
         mAPDUManager.setOutgoingLength(mCBOREncoder.getCurrentOffset());
     }
     
+    private void processGetAttestCertChain() {
+    	short tempByteBlob = getTempByteBlob();
+    	byte[] tempBuffer = KMByteBlob.cast(tempByteBlob).getBuffer();
+    	short tempBufferOffset = KMByteBlob.cast(tempByteBlob).getStartOff();
+    	short certChainLen = KMAndroidSEApplet.getInstance().getCertChainExt(tempBuffer, tempBufferOffset);
+        
+    	mAPDUManager.setOutgoing();
+        byte[] outBuffer = mAPDUManager.getSendBuffer();
+        short le = mAPDUManager.getOutbufferLength();
+        mCBOREncoder.init(outBuffer, (short) 0, le);
+        mCBOREncoder.startArray((short)2);
+        mCBOREncoder.encodeUInt8((byte)0); //Success
+        mCBOREncoder.startArray((short)1);
+        mCBOREncoder.encodeRawData(tempBuffer, tempBufferOffset, certChainLen);
+        //mCBOREncoder.encodeByteString(tempBuffer, tempBufferOffset, certChainLen);
+        mAPDUManager.setOutgoingLength(mCBOREncoder.getCurrentOffset());
+    }
 }

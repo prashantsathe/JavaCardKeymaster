@@ -236,7 +236,8 @@ public abstract class KMType {
   public static final short EARLY_BOOT_ONLY = (short) 0x0131;
   //Device unique attestation.
   public static final short DEVICE_UNIQUE_ATTESTATION = (short) 0x02D0;
-
+  //Identity credential key
+  public static final short IDENTITY_CREDENTIAL_KEY = (short) 0x02D1;
   // Byte Tag
   // Application Id
   public static final short APPLICATION_ID = (short) 0x0259;
