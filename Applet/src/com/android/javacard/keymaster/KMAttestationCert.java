@@ -137,6 +137,14 @@ public interface KMAttestationCert {
   KMAttestationCert issuer(short obj);
 
   /**
+   * Subject of cert.
+   *
+   * @param obj This is KMByteBlob containing the subject.
+   * @return instance of KMAttestationCert
+   */
+  KMAttestationCert subject(short obj);
+
+  /**
    * Set byte buffer to be used to generate certificate.
    *
    * @param buf This is byte[] buffer.
