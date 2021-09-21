@@ -209,7 +209,7 @@ public class KMAndroidSEProvider implements KMSEProvider {
     rsaOaepDecipher = new KMRsaOAEPEncoding(KMRsaOAEPEncoding.ALG_RSA_PKCS1_OAEP_SHA256_MGF1_SHA1);
 
     kdf = Signature.getInstance(Signature.ALG_AES_CMAC_128, false);
-    hmacSignature = Signature.getInstance(Signature.ALG_HMAC_SHA_256, false);
+    hmacSignature = Signature.getInstance(Signature.ALG_HMAC_SHA_256, true);
 
     // Temporary transient array created to use locally inside functions.
     tmpArray = JCSystem.makeTransientByteArray(TMP_ARRAY_SIZE,

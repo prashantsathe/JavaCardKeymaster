@@ -2093,15 +2093,30 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     ptr = KMVerificationToken.cast(verToken).getChallenge();
     KMInteger.cast(ptr)
         .value(scratchPad, (short) (len + (short) (8 - KMInteger.cast(ptr).length())));
+    for (byte i = (byte)0; i < (byte)4; i++) {
+	    byte temp = scratchPad[(short)(len + i)];
+	    scratchPad[(short)(len + i)] = scratchPad[(short)(len + 7 - i)];
+	    scratchPad[(short)(len + 7 - i)] = temp;
+    }
     len += 8;
     // concatenate timestamp -8 bytes
     ptr = KMVerificationToken.cast(verToken).getTimestamp();
     KMInteger.cast(ptr)
         .value(scratchPad, (short) (len + (short) (8 - KMInteger.cast(ptr).length())));
+    for (byte i = (byte)0; i < (byte)4; i++) {
+	    byte temp = scratchPad[(short)(len + i)];
+	    scratchPad[(short)(len + i)] = scratchPad[(short)(len + 7 - i)];
+	    scratchPad[(short)(len + 7 - i)] = temp;
+    }
     len += 8;
     // concatenate security level - 4 bytes
     ptr = KMVerificationToken.cast(verToken).getSecurityLevel();
     scratchPad[(short) (len + 3)] = KMEnum.cast(ptr).getVal();
+    for (byte i = (byte)0; i < (byte)2; i++) {
+	    byte temp = scratchPad[(short)(len + i)];
+	    scratchPad[(short)(len + i)] = scratchPad[(short)(len + 3 - i)];
+	    scratchPad[(short)(len + 3 - i)] = temp;
+    }
     len += 4;
     // concatenate Parameters verified - blob of encoded data.
     ptr = KMVerificationToken.cast(verToken).getParametersVerified();
@@ -2837,6 +2852,43 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     }
   }
 
+  public boolean validateAuthTokensExt(byte[] argsBuff,
+  		short challengeOffset, short challengeLen,
+  		short secureUserIdOffset, short secureUserIdLen,
+  		short authenticatorIdOffset, short authenticatorIdLen,
+  		short hardwareAuthenticatorTypeOffset, short hardwareAuthenticatorTypeLen,
+  		short timeStampOffset, short timeStampLen,
+  		short macOffset, short macLen,
+  		short verificationTokenChallengeOffset, short verificationTokenChallengeLen,
+  		short verificationTokenTimeStampOffset, short verificationTokenTimeStampLen,
+  		short parametersVerifiedOffset, short parametersVerifiedLen,
+  		short verificationTokensecurityLevelOffset, short verificationTokensecurityLevelLen,
+  		short verificationTokenMacOffset, short verificationTokenMacLen,
+  		byte[] scratchPad) {
+	  short hwTokenInstance = KMHardwareAuthToken.instance();
+	  KMHardwareAuthToken.cast(hwTokenInstance).setChallenge(KMInteger.uint_64(argsBuff, challengeOffset));
+	  KMHardwareAuthToken.cast(hwTokenInstance).setUserId(KMInteger.uint_64(argsBuff, secureUserIdOffset));
+	  KMHardwareAuthToken.cast(hwTokenInstance).setAuthenticatorId(KMInteger.uint_64(argsBuff, authenticatorIdOffset));
+	  KMHardwareAuthToken.cast(hwTokenInstance).setHwAuthenticatorType(KMEnum.instance(KMType.USER_AUTH_TYPE, argsBuff[hardwareAuthenticatorTypeOffset]));
+	  KMHardwareAuthToken.cast(hwTokenInstance).setTimestamp(KMInteger.uint_64(argsBuff, timeStampOffset));
+	  KMHardwareAuthToken.cast(hwTokenInstance).setMac(KMByteBlob.instance(argsBuff, macOffset, macLen));
+	  boolean isHwTokenValid = validateHwToken(hwTokenInstance, scratchPad);
+	  boolean isVerificationTokenValid = false;
+	  try {
+		  short verificationTokenInstance = KMVerificationToken.instance();
+		  KMVerificationToken.cast(verificationTokenInstance).setChallenge(KMInteger.uint_64(argsBuff, verificationTokenChallengeOffset));
+		  KMVerificationToken.cast(verificationTokenInstance).setTimestamp(KMInteger.uint_64(argsBuff, verificationTokenTimeStampOffset));
+		  KMVerificationToken.cast(verificationTokenInstance).setParametersVerified(KMByteBlob.instance(argsBuff, parametersVerifiedOffset, parametersVerifiedLen));
+		  KMVerificationToken.cast(verificationTokenInstance).setSecurityLevel(KMEnum.instance(KMType.HARDWARE_TYPE, argsBuff[verificationTokensecurityLevelOffset]));
+		  KMVerificationToken.cast(verificationTokenInstance).setMac(KMByteBlob.instance(argsBuff, verificationTokenMacOffset, verificationTokenMacLen));
+		  validateVerificationToken(verificationTokenInstance, scratchPad);
+		  isVerificationTokenValid = true;
+	  } catch(KMException e) {
+		  isVerificationTokenValid = false;
+	  }
+	  return isHwTokenValid && isVerificationTokenValid;
+  }
+  
   private boolean validateHwToken(short hwToken, byte[] scratchPad) {
     // CBOR Encoding is always big endian
     short ptr = KMHardwareAuthToken.cast(hwToken).getMac();
