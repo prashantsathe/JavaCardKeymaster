@@ -44,6 +44,20 @@ public abstract class KMType {
   public static final byte VERIFICATION_TOKEN_TYPE = 0x09;
   public static final byte HMAC_SHARING_PARAM_TYPE = 0x0A;
   public static final byte X509_CERT = 0x0B;
+  public static final byte NEG_INTEGER_TYPE = 0x0C;
+  public static final byte TEXT_STRING_TYPE = 0x0D;
+  public static final byte MAP_TYPE = 0x0E;
+  public static final byte COSE_KEY_TYPE = 0x0F;
+  public static final byte COSE_PAIR_TAG_TYPE = 0x10;
+  public static final byte COSE_PAIR_INT_TAG_TYPE = 0x20;
+  public static final byte COSE_PAIR_NEG_INT_TAG_TYPE = 0x30;
+  public static final byte COSE_PAIR_BYTE_BLOB_TAG_TYPE = 0x40;
+  public static final byte COSE_PAIR_COSE_KEY_TAG_TYPE = 0x60;
+  public static final byte COSE_PAIR_SIMPLE_VALUE_TAG_TYPE = 0x70;
+  public static final byte COSE_PAIR_TEXT_STR_TAG_TYPE = (byte) 0x80;
+  public static final byte SIMPLE_VALUE_TYPE = (byte) 0x90;
+  public static final byte COSE_HEADERS_TYPE = (byte) 0xA0;
+  public static final byte COSE_CERT_PAYLOAD_TYPE = (byte) 0xB0;
   // Tag Types
   public static final short INVALID_TAG = 0x0000;
   public static final short ENUM_TAG = 0x1000;
@@ -59,6 +73,11 @@ public abstract class KMType {
   public static final short TAG_TYPE_MASK = (short) 0xF000;
 
   // Enum Tag
+  // Internal tags
+  public static final short RULE = 0x7FFF;
+  public static final byte IGNORE_INVALID_TAGS = 0x00;
+  public static final byte FAIL_ON_INVALID_TAGS = 0x01;
+
   // Algorithm Enum Tag key and values
   public static final short ALGORITHM = 0x0002;
   public static final byte RSA = 0x01;
@@ -143,9 +162,10 @@ public abstract class KMType {
   public static final byte DECRYPT = 0x01;
   public static final byte SIGN = 0x02;
   public static final byte VERIFY = 0x03;
+  public static final byte DERIVE_KEY = 0x04;
   public static final byte WRAP_KEY = 0x05;
-  public static final byte ATTEST_KEY = (byte) 0x7F;
-
+  public static final byte AGREE_KEY = 0x06;
+  public static final byte ATTEST_KEY = (byte) 0x07;
   // Block mode
   public static final short BLOCK_MODE = 0x0004;
   public static final byte ECB = 0x01;
@@ -172,6 +192,9 @@ public abstract class KMType {
   public static final byte RSA_PKCS1_1_5_SIGN = 0x05;
   public static final byte PKCS7 = 0x40;
 
+  // OAEP MGF Digests - only SHA-1 is supported in Javacard
+  public static final short RSA_OAEP_MGF_DIGEST = 0xCB;
+
   // Integer Tag - UINT, ULONG and DATE
   // UINT tags
   // Keysize
@@ -196,6 +219,8 @@ public abstract class KMType {
   public static final short BOOT_PATCH_LEVEL = 0x02CF;
   // Mac Length
   public static final short MAC_LENGTH = 0x03EB;
+  // Usage Count Limit
+  public static final short USAGE_COUNT_LIMIT = 0x195;
 
   // ULONG tags
   // RSA Public Exponent
@@ -205,8 +230,9 @@ public abstract class KMType {
   public static final short ACTIVE_DATETIME = 0x0190;
   public static final short ORIGINATION_EXPIRE_DATETIME = 0x0191;
   public static final short USAGE_EXPIRE_DATETIME = 0x0192;
-  public static final short CREATION_DATETIME = 0x02BD;//0x0193;
-
+  public static final short CREATION_DATETIME = 0x02BD;;
+  public static final short CERTIFICATE_NOT_BEFORE = 0x03F0;
+  public static final short CERTIFICATE_NOT_AFTER = 0x03F1;
   // Integer Array Tags - ULONG_REP and UINT_REP.
   // User Secure Id
   public static final short USER_SECURE_ID = (short) 0x01F6;
@@ -272,10 +298,16 @@ public abstract class KMType {
   public static final short NONCE = (short) 0x03E9;
   // Confirmation Token
   public static final short CONFIRMATION_TOKEN = (short) 0x03ED;
+  // Serial Number - this is a big num but in applet we handle it as byte blob
+  public static final short CERTIFICATE_SERIAL_NUM = (short) 0x03EE;
+  // Subject Name
+  public static final short CERTIFICATE_SUBJECT_NAME = (short) 0x03EF;
 
   public static final short LENGTH_FROM_PDU = (short) 0xFFFF;
 
   public static final byte NO_VALUE = (byte) 0xff;
+  // Support Curves for Eek Chain validation.
+  public static final byte RKP_CURVE_P256 = 1;
   // Type offsets.
   public static final byte KM_TYPE_BASE_OFFSET = 0;
   public static final byte KM_ARRAY_OFFSET = KM_TYPE_BASE_OFFSET;
@@ -293,11 +325,40 @@ public abstract class KMType {
   public static final byte KM_KEY_CHARACTERISTICS_OFFSET = KM_TYPE_BASE_OFFSET + 12;
   public static final byte KM_KEY_PARAMETERS_OFFSET = KM_TYPE_BASE_OFFSET + 13;
   public static final byte KM_VERIFICATION_TOKEN_OFFSET = KM_TYPE_BASE_OFFSET + 14;
+  public static final byte KM_NEG_INTEGER_OFFSET = KM_TYPE_BASE_OFFSET + 15;
+  public static final byte KM_TEXT_STRING_OFFSET = KM_TYPE_BASE_OFFSET + 16;
+  public static final byte KM_MAP_OFFSET = KM_TYPE_BASE_OFFSET + 17;
+  public static final byte KM_COSE_KEY_OFFSET = KM_TYPE_BASE_OFFSET + 18;
+  public static final byte KM_COSE_KEY_INT_VAL_OFFSET = KM_TYPE_BASE_OFFSET + 19;
+  public static final byte KM_COSE_KEY_NINT_VAL_OFFSET = KM_TYPE_BASE_OFFSET + 20;
+  public static final byte KM_COSE_KEY_BYTE_BLOB_VAL_OFFSET = KM_TYPE_BASE_OFFSET + 21;
+  public static final byte KM_COSE_KEY_COSE_KEY_VAL_OFFSET = KM_TYPE_BASE_OFFSET + 22;
+  public static final byte KM_COSE_KEY_SIMPLE_VAL_OFFSET = KM_TYPE_BASE_OFFSET + 23;
+  public static final byte KM_SIMPLE_VALUE_OFFSET = KM_TYPE_BASE_OFFSET + 24;
+  public static final byte KM_COSE_HEADERS_OFFSET = KM_TYPE_BASE_OFFSET + 25;
+  public static final byte KM_COSE_KEY_TXT_STR_VAL_OFFSET = KM_TYPE_BASE_OFFSET + 26;
+  public static final byte KM_COSE_CERT_PAYLOAD_OFFSET = KM_TYPE_BASE_OFFSET + 27;
+  public static final byte KM_BIGNUM_TAG_OFFSET = KM_TYPE_BASE_OFFSET + 28;
+
+  // Attestation types
+  public static final byte NO_CERT = 0;
+  public static final byte ATTESTATION_CERT = 1;
+  public static final byte SELF_SIGNED_CERT = 2;
+  public static final byte FAKE_CERT = 3;
+  // Buffering Mode
+  public static final byte BUF_NONE = 0;
+  public static final byte BUF_RSA_NO_DIGEST = 1;
+  public static final byte BUF_EC_NO_DIGEST = 2;
+  public static final byte AES_BUF_BLOCK_ALIGN = 3;
+  public static final byte AES_BUF_PKCS7_DECRYPT = 4;
+  public static final byte DES_BUF_BLOCK_ALIGN = 5;
+  public static final byte DES_BUF_PKCS7_DECRYPT = 6;
+  public static final byte AES_GCM_DECRYPT_BLOCK_ALIGN = 7;
 
   protected static KMRepository repository;
   protected static byte[] heap;
   // Instance table
-  public static final byte INSTANCE_TABLE_SIZE = 15;
+  public static final byte INSTANCE_TABLE_SIZE = 29;
   protected static short[] instanceTable;
 
   public static void initialize() {

@@ -32,25 +32,27 @@ public class KMByteTag extends KMTag {
 
   // The allowed tag keys of type bool tag
   private static final short[] tags = {
-    APPLICATION_ID,
-    APPLICATION_DATA,
-    ROOT_OF_TRUST,
-    UNIQUE_ID,
-    ATTESTATION_CHALLENGE,
-    ATTESTATION_APPLICATION_ID,
-    ATTESTATION_ID_BRAND,
-    ATTESTATION_ID_DEVICE,
-    ATTESTATION_ID_PRODUCT,
-    ATTESTATION_ID_SERIAL,
-    ATTESTATION_ID_IMEI,
-    ATTESTATION_ID_MEID,
-    ATTESTATION_ID_MANUFACTURER,
-    ATTESTATION_ID_MODEL,
-    ASSOCIATED_DATA,
-    NONCE,
-    CONFIRMATION_TOKEN,
-    VERIFIED_BOOT_KEY,
-    VERIFIED_BOOT_HASH
+      APPLICATION_ID,
+      APPLICATION_DATA,
+      ROOT_OF_TRUST,
+      UNIQUE_ID,
+      ATTESTATION_CHALLENGE,
+      ATTESTATION_APPLICATION_ID,
+      ATTESTATION_ID_BRAND,
+      ATTESTATION_ID_DEVICE,
+      ATTESTATION_ID_PRODUCT,
+      ATTESTATION_ID_SERIAL,
+      ATTESTATION_ID_IMEI,
+      ATTESTATION_ID_MEID,
+      ATTESTATION_ID_MANUFACTURER,
+      ATTESTATION_ID_MODEL,
+      ASSOCIATED_DATA,
+      NONCE,
+      CONFIRMATION_TOKEN,
+      VERIFIED_BOOT_KEY,
+      VERIFIED_BOOT_HASH,
+      CERTIFICATE_SERIAL_NUM,
+      CERTIFICATE_SUBJECT_NAME,
   };
 
   private KMByteTag() {
@@ -60,7 +62,7 @@ public class KMByteTag extends KMTag {
     if (prototype == null) {
       prototype = new KMByteTag();
     }
-    instanceTable[KM_BYTE_TAG_OFFSET] = ptr;
+    KMType.instanceTable[KM_BYTE_TAG_OFFSET] = ptr;
     return prototype;
   }
 
@@ -106,7 +108,7 @@ public class KMByteTag extends KMTag {
   }
 
   public short getKey() {
-    return Util.getShort(heap, (short) (instanceTable[KM_BYTE_TAG_OFFSET] + TLV_HEADER_SIZE + 2));
+    return Util.getShort(heap, (short) (KMType.instanceTable[KM_BYTE_TAG_OFFSET] + TLV_HEADER_SIZE + 2));
   }
 
   public short getTagType() {
@@ -114,11 +116,11 @@ public class KMByteTag extends KMTag {
   }
 
   public short getValue() {
-    return Util.getShort(heap, (short) (instanceTable[KM_BYTE_TAG_OFFSET] + TLV_HEADER_SIZE + 4));
+    return Util.getShort(heap, (short) (KMType.instanceTable[KM_BYTE_TAG_OFFSET] + TLV_HEADER_SIZE + 4));
   }
 
   public short length() {
-    short blobPtr = Util.getShort(heap, (short) (instanceTable[KM_BYTE_TAG_OFFSET] + TLV_HEADER_SIZE + 4));
+    short blobPtr = Util.getShort(heap, (short) (KMType.instanceTable[KM_BYTE_TAG_OFFSET] + TLV_HEADER_SIZE + 4));
     return KMByteBlob.cast(blobPtr).length();
   }
 
