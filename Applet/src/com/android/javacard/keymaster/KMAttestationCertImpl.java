@@ -202,19 +202,19 @@ public class KMAttestationCertImpl implements KMAttestationCert {
     serialNum = KMType.INVALID_VALUE;
   }
 
-  @Override
+  
   public KMAttestationCert verifiedBootHash(short obj) {
     verifiedHash = obj;
     return this;
   }
 
-  @Override
+  
   public KMAttestationCert verifiedBootKey(short obj) {
     verifiedBootKey = obj;
     return this;
   }
 
-  @Override
+  
   public KMAttestationCert verifiedBootState(byte val) {
     verifiedState = val;
     return this;
@@ -225,7 +225,7 @@ public class KMAttestationCertImpl implements KMAttestationCert {
     return this;
   }
 
-  @Override
+  
   public KMAttestationCert notBefore(short obj, boolean derEncoded, byte[] scratchpad) {
     if(!derEncoded) {
       // convert milliseconds to UTC date
@@ -237,7 +237,7 @@ public class KMAttestationCertImpl implements KMAttestationCert {
     return this;
   }
 
-  @Override
+  
   public KMAttestationCert notAfter(short usageExpiryTimeObj, boolean derEncoded, byte[] scratchPad) {
     if(!derEncoded) {
       if (usageExpiryTimeObj != KMType.INVALID_VALUE) {
@@ -263,7 +263,7 @@ public class KMAttestationCertImpl implements KMAttestationCert {
     return this;
   }
 
-  @Override
+  
   public KMAttestationCert deviceLocked(boolean val) {
     if (val) {
       deviceLocked = (byte) 0xFF;
@@ -273,19 +273,19 @@ public class KMAttestationCertImpl implements KMAttestationCert {
     return this;
   }
 
-  @Override
+  
   public KMAttestationCert publicKey(short obj) {
     pubKey = obj;
     return this;
   }
 
-  @Override
+  
   public KMAttestationCert attestationChallenge(short obj) {
     attChallenge = obj;
     return this;
   }
 
-  @Override
+  
   public KMAttestationCert extensionTag(short tag, boolean hwEnforced) {
     if (hwEnforced) {
       hwParams[hwParamsIndex] = tag;
@@ -300,7 +300,7 @@ public class KMAttestationCertImpl implements KMAttestationCert {
     return this;
   }
 
-  @Override
+  
   public KMAttestationCert issuer(short obj) {
     issuer = obj;
     return this;
@@ -521,6 +521,7 @@ public class KMAttestationCertImpl implements KMAttestationCert {
     short last = stackPtr;
     // Below are the allowed hardwareEnforced Authorization tags inside the attestation certificate's extension.
     short[] tagIds = {
+        KMType.IDENTITY_CREDENTIAL_KEY,
         KMType.BOOT_PATCH_LEVEL, KMType.VENDOR_PATCH_LEVEL,
         KMType.ATTESTATION_ID_MODEL, KMType.ATTESTATION_ID_MANUFACTURER,
         KMType.ATTESTATION_ID_MEID, KMType.ATTESTATION_ID_IMEI,
@@ -853,7 +854,7 @@ public class KMAttestationCertImpl implements KMAttestationCert {
     }
   }
 
-  @Override
+  
   public KMAttestationCert buffer(byte[] buf, short start, short maxLen) {
     stack = buf;
     bufStart = start;
@@ -862,12 +863,12 @@ public class KMAttestationCertImpl implements KMAttestationCert {
     return this;
   }
 
-  @Override
+  
   public short getCertStart() {
     return certStart;
   }
 
-  @Override
+  
   public short getCertLength() {
     return certLength;
   }
@@ -945,7 +946,7 @@ public void build(short attSecret, short attMod, boolean rsaSign, boolean fakeCe
 	    //print(stack, getCertStart(), getCertLength());
 	  }
   
- @Override
+ 
  public void build() {
     if(certMode == KMType.FAKE_CERT) {
       build(KMType.INVALID_VALUE, KMType.INVALID_VALUE, true, true);
@@ -954,7 +955,7 @@ public void build(short attSecret, short attMod, boolean rsaSign, boolean fakeCe
     }
   }
   
-  @Override
+  
   public KMAttestationCert makeUniqueId(byte[] scratchPad, short scratchPadOff,
       byte[] creationTime, short timeOffset, short creationTimeLen,
       byte[] attestAppId, short appIdOff, short attestAppIdLen,
@@ -998,7 +999,7 @@ public void build(short attSecret, short attMod, boolean rsaSign, boolean fakeCe
     return uniqueId(timeOffset);
   }
 
-  @Override
+  
   public boolean serialNumber(short number){
     short length = KMByteBlob.cast(number).length();
     if(length > SERIAL_NUM_MAX_LEN){
@@ -1012,7 +1013,7 @@ public void build(short attSecret, short attMod, boolean rsaSign, boolean fakeCe
     return true;
   }
 
-  @Override
+  
   public boolean subjectName(short sub){
     /*
     short length = KMByteBlob.cast(sub).length();
@@ -1028,7 +1029,7 @@ public void build(short attSecret, short attMod, boolean rsaSign, boolean fakeCe
     return true;
   }
   
-  @Override
+  
   public KMAttestationCert ecAttestKey(short attestKey, byte mode){
     certMode = mode;
     certAttestKeySecret = attestKey;
@@ -1037,7 +1038,7 @@ public void build(short attSecret, short attMod, boolean rsaSign, boolean fakeCe
     return this;
   }
 
-  @Override
+  
   public KMAttestationCert rsaAttestKey(short attestPrivExp, short attestMod, byte mode){
     certMode = mode;
     certAttestKeySecret = attestPrivExp;

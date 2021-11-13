@@ -15,12 +15,14 @@
  */
 package com.android.javacard.seprovider;
 
+import javacard.framework.Shareable;
+
 /**
  * KMOperation represents a persistent operation started by keymaster hal's beginOperation function.
  * This operation is persistent i.e. it will be stored in non volatile memory of se card. It will be
  * returned back to KMSEProvider for the reuse when the operation is finished.
  */
-public interface KMOperation {
+public interface KMOperation extends Shareable{
 
   // Used for cipher operations
   short update(byte[] inputDataBuf, short inputDataStart, short inputDataLength,

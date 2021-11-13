@@ -84,7 +84,7 @@ public class KMAndroidSEProvider implements KMSEProvider {
   private static AEADCipher aesGcmCipher;
 
   private Signature kdf;
-  public static byte[] resetFlag;
+  public byte[] resetFlag;
 
   private Signature hmacSignature;
   //For ImportwrappedKey operations.
@@ -148,11 +148,11 @@ public class KMAndroidSEProvider implements KMSEProvider {
     rsaOaepDecipher = new KMRsaOAEPEncoding(KMRsaOAEPEncoding.ALG_RSA_PKCS1_OAEP_SHA256_MGF1_SHA1);
 
     kdf = Signature.getInstance(Signature.ALG_AES_CMAC_128, false);
-    hmacSignature = Signature.getInstance(Signature.ALG_HMAC_SHA_256, false);
+    hmacSignature = Signature.getInstance(Signature.ALG_HMAC_SHA_256, true);
 
     // Temporary transient array created to use locally inside functions.
     tmpArray = JCSystem.makeTransientByteArray(TMP_ARRAY_SIZE,
-        JCSystem.CLEAR_ON_DESELECT);
+        JCSystem.CLEAR_ON_RESET);
 
     // Random number generator initialisation.
     rng = RandomData.getInstance(RandomData.ALG_KEYGENERATION);
@@ -478,7 +478,7 @@ public class KMAndroidSEProvider implements KMSEProvider {
     }
     if (aesGcmCipher == null) {
       aesGcmCipher = (AEADCipher) Cipher.getInstance(AEADCipher.ALG_AES_GCM,
-          false);
+          true);
     }
     aesGcmCipher.init(key, Cipher.MODE_ENCRYPT, nonce, nonceStart, nonceLen);
     aesGcmCipher.updateAAD(authData, authDataStart, authDataLen);
@@ -1485,5 +1485,8 @@ public class KMAndroidSEProvider implements KMSEProvider {
 
   public boolean isProvisionLocked() {
     return isProvisionLocked;
+  }
+  public void releaseAllOperations() {
+	  poolMgr.powerReset();
   }
 }

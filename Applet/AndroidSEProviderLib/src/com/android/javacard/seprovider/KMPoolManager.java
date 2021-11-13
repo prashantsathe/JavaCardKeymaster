@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 package com.android.javacard.seprovider;
+import javacard.framework.JCSystem;
 import javacard.security.KeyAgreement;
 import javacard.security.Signature;
 import javacardx.crypto.AEADCipher;
@@ -162,7 +163,7 @@ public class KMPoolManager {
     } else if (KMEcdsa256NoDigestSignature.ALG_ECDSA_NODIGEST == alg) {
       return new KMEcdsa256NoDigestSignature(alg);
     } else {
-      return Signature.getInstance(alg, false);
+      return Signature.getInstance(alg, true);
     }
   }
 

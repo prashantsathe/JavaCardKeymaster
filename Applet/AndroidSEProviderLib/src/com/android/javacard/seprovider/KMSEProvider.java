@@ -15,13 +15,15 @@
  */
 package com.android.javacard.seprovider;
 
+import javacard.framework.Shareable;
+
 /**
  * KMSEProvider is facade to use SE specific methods. The main intention of this interface is to
  * abstract the cipher, signature and backup and restore related functions. The instance of this
  * interface is created by the singleton KMSEProviderImpl class for each provider. At a time there
  * can be only one provider in the applet package.
  */
-public interface KMSEProvider extends KMUpgradable {
+public interface KMSEProvider extends KMUpgradable, Shareable {
 
   /**
    * Create a symmetric key instance. If the algorithm and/or keysize are not supported then it
@@ -699,5 +701,10 @@ public interface KMSEProvider extends KMUpgradable {
   
   public boolean isProvisionLocked();
 
+  /**
+   * Releases all the instance back to pool.
+   * Generally this is used when card is reset.
+   */
+  void releaseAllOperations();
 
 }

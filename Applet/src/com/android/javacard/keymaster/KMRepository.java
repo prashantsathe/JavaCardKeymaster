@@ -360,25 +360,25 @@ public class KMRepository implements KMUpgradable {
     }
     writeDataEntry(BOOT_OS_PATCH, buf, start, len);
   }
-  @Override
+  
   public void onSave(Element ele) {
     ele.write(dataIndex);
     ele.write(dataTable);
   }
 
-  @Override
+  
   public void onRestore(Element ele) {
     dataIndex = ele.readShort();
     dataTable = (byte[]) ele.readObject();
   }
 
-  @Override
+  
   public short getBackupPrimitiveByteCount() {
     // dataIndex
     return (short) 2;
   }
 
-  @Override
+  
   public short getBackupObjectCount() {
     // dataTable
     return (short) 1;

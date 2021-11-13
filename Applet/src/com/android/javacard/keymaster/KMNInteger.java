@@ -112,7 +112,7 @@ public class KMNInteger extends KMInteger {
     return ptr;
   }
 
-  @Override
+  
   protected short getBaseOffset() {
     return instanceTable[KM_NEG_INTEGER_OFFSET];
   }

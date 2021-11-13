@@ -16,6 +16,7 @@
 
 package com.android.javacard.keymaster;
 
+import com.android.javacard.seprovider.KMAndroidSEProvider;
 import com.android.javacard.seprovider.KMAttestationCert;
 import com.android.javacard.seprovider.KMDeviceUniqueKey;
 import com.android.javacard.seprovider.KMException;
@@ -35,7 +36,7 @@ import javacardx.apdu.ExtendedLength;
  * objects. It also implements the keymaster state machine and handles javacard applet life cycle
  * events.
  */
-public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLength {
+public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLength, KMAppletBridge {
 
   // Constants.
   public static final byte[] F4 = {0x01, 0x00, 0x01};
@@ -62,6 +63,12 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
       0x65,
       0x79
   };
+  public static final byte[] X509SubjectIC = {
+		  0x30, 0x2A, 0x31, 0x28, 0x30, 0x26, 0x06, 0x03, 0x55,
+		  0x04, 0x03, 0x0C, 0x1F, 0x41, 0x6E, 0x64, 0x72, 0x6F, 0x69, 0x64, 0x20, 0x49, 0x64, 0x65, 0x6E,
+		  0x74, 0x69, 0x74, 0x79, 0x20, 0x43, 0x72, 0x65, 0x64, 0x65, 0x6E, 0x74, 0x69, 0x61, 0x6C, 0x20,
+		  0x4B, 0x65, 0x79
+	  };
 
   private static final byte[] dec319999Ms ={(byte)0, (byte)0, (byte)0xE6, (byte)0x77,
       (byte)0xD2, (byte)0x1F, (byte)0xD8, (byte)0x18};
@@ -222,9 +229,9 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     repository = new KMRepository(isUpgrading);
     encoder = new KMEncoder();
     decoder = new KMDecoder();
-    data = JCSystem.makeTransientShortArray(DATA_ARRAY_SIZE, JCSystem.CLEAR_ON_DESELECT);
+    data = JCSystem.makeTransientShortArray(DATA_ARRAY_SIZE, JCSystem.CLEAR_ON_RESET);
     tmpVariables =
-        JCSystem.makeTransientShortArray(TMP_VARIABLE_ARRAY_SIZE, JCSystem.CLEAR_ON_DESELECT);
+        JCSystem.makeTransientShortArray(TMP_VARIABLE_ARRAY_SIZE, JCSystem.CLEAR_ON_RESET);
     wrappingKey = JCSystem.makeTransientByteArray((short)(WRAPPING_KEY_SIZE+1), JCSystem.CLEAR_ON_RESET);
     resetWrappingKey();
     opTable = new KMOperationState[MAX_OPERATIONS_COUNT];
@@ -309,6 +316,17 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
   @Override
   public void deselect() {
     repository.onDeselect();
+  }
+
+  /**
+   * Installs this applet.
+   *
+   * @param bArray the array containing installation parameters
+   * @param bOffset the starting offset in bArray
+   * @param bLength the length in bytes of the parameter data in bArray
+   */
+  public static void install(byte[] bArray, short bOffset, byte bLength) {
+    new KMKeymasterApplet(new KMAndroidSEProvider()).register(bArray, (short) (bOffset + 1), bArray[bOffset]);
   }
 
   /**
@@ -1353,6 +1371,92 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     return cert;
   }
 
+  public short createAttestationForEcPublicKey(boolean isTestCredential, byte[] argsBuff, short pubKeyOffset,
+	short pubKeyLen, short attAppIdOffset, short attAppIdLen, short attChallangeOffset, short attChallangeLen,
+	short activeDateTimeOffset, short activeDateTimeLen, short expireDateTimeOffset, short expireTimeLen,
+	short attestKeyOffset, short attestKeyLen, short attestCertIssuerOffset, short attestCertIssuerLen,
+	byte[] scratchPad, short scratchPadOffset) {
+
+	  short certLen = (short)0;
+	  try {
+		  short hwParamCount = (short)8;
+		  if(!isTestCredential) {
+			  hwParamCount++;
+		  }
+		  short arrPtr = KMArray.instance(hwParamCount);
+		  KMArray hwParams = KMArray.cast(arrPtr);
+		  short tagIndex = 0;
+	
+		  short byteBlob = KMByteBlob.instance((short) 1);
+		  KMByteBlob.cast(byteBlob).add((short) 0, KMType.SIGN);
+		  hwParams.add(tagIndex++, KMEnumArrayTag.instance(KMType.PURPOSE, byteBlob));
+		  hwParams.add(tagIndex++, KMIntegerTag.instance(KMType.UINT_TAG, KMType.KEYSIZE, KMInteger.uint_16((short) 256)));
+		  hwParams.add(tagIndex++, KMEnumTag.instance(KMType.ALGORITHM, KMType.EC));
+		  hwParams.add(tagIndex++, KMBoolTag.instance(KMType.NO_AUTH_REQUIRED));
+		  byteBlob = KMByteBlob.instance((short) 1);
+		  KMByteBlob.cast(byteBlob).add((short) 0, KMType.SHA2_256);
+		  hwParams.add(tagIndex++, KMEnumArrayTag.instance(KMType.DIGEST, byteBlob));
+		  hwParams.add(tagIndex++, KMEnumTag.instance(KMType.ECCURVE, KMType.P_256));
+		  hwParams.add(tagIndex++, KMIntegerTag.instance(KMType.UINT_TAG, KMType.OS_VERSION, KMRepository.instance().getOsVersion()));
+		  hwParams.add(tagIndex++, KMIntegerTag.instance(KMType.UINT_TAG, KMType.OS_PATCH_LEVEL, KMRepository.instance().getOsPatch()));
+		  if(!isTestCredential) {
+			  hwParams.add(tagIndex++, KMBoolTag.instance(KMType.IDENTITY_CREDENTIAL_KEY));
+		  }
+	
+		  data[HW_PARAMETERS] = KMKeyParameters.instance(arrPtr);
+	
+		  arrPtr = KMArray.instance((short)2);
+		  short dateTag = KMInteger.uint_64(argsBuff, activeDateTimeOffset);
+		  KMArray.cast(arrPtr).add((short)0, KMIntegerTag.instance(KMType.DATE_TAG, KMType.CREATION_DATETIME, dateTag));
+		  short expDateTag = KMInteger.uint_64(argsBuff, expireDateTimeOffset);
+		  KMArray.cast(arrPtr).add((short)1, KMIntegerTag.instance(KMType.DATE_TAG, KMType.USAGE_EXPIRE_DATETIME, expDateTag));
+	
+		  data[SW_PARAMETERS] = KMKeyParameters.instance(arrPtr);
+	
+		  arrPtr = KMArray.instance((short) 6);
+		  KMArray.cast(arrPtr).add((short) 0, KMByteTag.instance(KMType.ATTESTATION_APPLICATION_ID,
+				  KMByteBlob.instance(argsBuff, attAppIdOffset, attAppIdLen)));
+		  KMArray.cast(arrPtr).add((short) 1, KMByteTag.instance(KMType.ATTESTATION_CHALLENGE,
+		        KMByteBlob.instance(argsBuff, attChallangeOffset, attChallangeLen)));
+		  KMArray.cast(arrPtr).add((short) 2, KMEnumTag.instance(KMType.ALGORITHM, KMType.EC));
+		  byteBlob = KMByteBlob.instance(X509SubjectIC, (short) 0, (short)X509SubjectIC.length);
+		  KMArray.cast(arrPtr).add((short) 3, KMByteTag.instance(KMType.CERTIFICATE_SUBJECT_NAME, byteBlob));
+		  dateTag = KMInteger.uint_64(argsBuff, activeDateTimeOffset);
+		  KMArray.cast(arrPtr).add((short)4, KMIntegerTag.instance(KMType.DATE_TAG, KMType.CERTIFICATE_NOT_BEFORE, dateTag));
+		  expDateTag = KMInteger.uint_64(argsBuff, expireDateTimeOffset);
+		  KMArray.cast(arrPtr).add((short)5, KMIntegerTag.instance(KMType.DATE_TAG, KMType.CERTIFICATE_NOT_AFTER, expDateTag));
+	
+		  data[KEY_PARAMETERS] = KMKeyParameters.instance(arrPtr);
+		  data[PUB_KEY] = KMByteBlob.instance(argsBuff, pubKeyOffset, pubKeyLen);
+
+		  short attestKeyBlob = KMByteBlob.instance(argsBuff, attestKeyOffset, attestKeyLen);
+		  
+		  KMAttestationCert cert = makeAttestationCert(attestKeyBlob, KMType.INVALID_VALUE,
+				  KMByteBlob.instance(argsBuff, attChallangeOffset, attChallangeLen),
+				  KMByteBlob.instance(argsBuff, attestCertIssuerOffset, attestCertIssuerLen),
+				  data[HW_PARAMETERS], data[SW_PARAMETERS], scratchPad);
+		  short certBuff = KMByteBlob.instance(MAX_CERT_SIZE);
+		  cert.buffer(KMByteBlob.cast(certBuff).getBuffer(), KMByteBlob.cast(certBuff).getStartOff(), KMByteBlob.cast(certBuff).length());
+		  cert.build();
+		  certLen = Util.arrayCopyNonAtomic(KMByteBlob.cast(certBuff).getBuffer(), cert.getCertStart(), scratchPad, scratchPadOffset, cert.getCertLength());
+	  } finally {
+		  KMRepository.instance().clean();
+	  }
+	  return certLen;
+  }
+
+  public short convertDate(byte[] timeBuffer, short timeBufferOffset,
+			byte[] outBuffer, short outBufferOffset) {
+
+	short currentTime = KMInteger.uint_64(timeBuffer, timeBufferOffset);
+	short convertedDate = KMUtils.convertToDate(currentTime, outBuffer, true);
+	Util.arrayCopyNonAtomic(KMByteBlob.cast(convertedDate).getBuffer(),
+			KMByteBlob.cast(convertedDate).getStartOff(), outBuffer, outBufferOffset, KMByteBlob.cast(convertedDate).length());
+	short len = KMByteBlob.cast(convertedDate).length();
+	KMRepository.instance().clean();
+	return len;
+  }
+
   // private KMAttestationCert makeFakeCert(byte[] scratchPad) {
   //   KMAttestationCert cert = makeCommonCert(scratchPad);
   //   short alg = KMKeyParameters.findTag(KMType.ENUM_TAG, KMType.ALGORITHM, data[KEY_PARAMETERS]);
@@ -2021,14 +2125,27 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     len = (short) authVerification.length;
     // concatenate challenge - 8 bytes
     ptr = KMVerificationToken.cast(verToken).getChallenge();
-    KMInteger.cast(ptr)
-        .value(scratchPad, (short) (len + (short) (8 - KMInteger.cast(ptr).length())));
+    if (KMConfigurations.TEE_MACHINE_TYPE == KMConfigurations.LITTLE_ENDIAN) {
+	    KMInteger.cast(ptr)
+	        .toLittleEndian(scratchPad, (short) (len + (short) (8 - KMInteger.cast(ptr).length())));
+    } else {
+	    KMInteger.cast(ptr)
+	        .value(scratchPad, (short) (len + (short) (8 - KMInteger.cast(ptr).length())));
+    }
     len += 8;
     // concatenate timestamp -8 bytes
     ptr = KMVerificationToken.cast(verToken).getTimestamp();
-    KMInteger.cast(ptr)
+    if (KMConfigurations.TEE_MACHINE_TYPE == KMConfigurations.LITTLE_ENDIAN) {
+	    KMInteger.cast(ptr)
+	        .toLittleEndian(scratchPad, (short) (len + (short) (8 - KMInteger.cast(ptr).length())));
+    } else {
+    	KMInteger.cast(ptr)
         .value(scratchPad, (short) (len + (short) (8 - KMInteger.cast(ptr).length())));
+    }
     len += 8;
+	// concatenate security level - 4 bytes
+	scratchPad[(short) (len + 3)] = (byte)0;
+	len += 4;
     // hmac the data
     ptr = KMVerificationToken.cast(verToken).getMac();
     short key = repository.getComputedHmacKey();
@@ -2873,6 +2990,47 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     }
   }
 
+  public boolean validateAuthTokensExt(byte[] argsBuff,
+  		short challengeOffset, short challengeLen,
+  		short secureUserIdOffset, short secureUserIdLen,
+  		short authenticatorIdOffset, short authenticatorIdLen,
+  		short hardwareAuthenticatorTypeOffset, short hardwareAuthenticatorTypeLen,
+  		short timeStampOffset, short timeStampLen,
+  		short macOffset, short macLen,
+  		short verificationTokenChallengeOffset, short verificationTokenChallengeLen,
+  		short verificationTokenTimeStampOffset, short verificationTokenTimeStampLen,
+  		short parametersVerifiedOffset, short parametersVerifiedLen,
+  		short verificationTokensecurityLevelOffset, short verificationTokensecurityLevelLen,
+  		short verificationTokenMacOffset, short verificationTokenMacLen,
+  		byte[] scratchPad) {
+	  short hwTokenInstance = KMHardwareAuthToken.instance();
+	  KMHardwareAuthToken.cast(hwTokenInstance).setChallenge(KMInteger.uint_64(argsBuff, challengeOffset));
+	  KMHardwareAuthToken.cast(hwTokenInstance).setUserId(KMInteger.uint_64(argsBuff, secureUserIdOffset));
+	  KMHardwareAuthToken.cast(hwTokenInstance).setAuthenticatorId(KMInteger.uint_64(argsBuff, authenticatorIdOffset));
+	  KMHardwareAuthToken.cast(hwTokenInstance).setHwAuthenticatorType(KMEnum.instance(KMType.USER_AUTH_TYPE, argsBuff[hardwareAuthenticatorTypeOffset]));
+	  KMHardwareAuthToken.cast(hwTokenInstance).setTimestamp(KMInteger.uint_64(argsBuff, timeStampOffset));
+	  KMHardwareAuthToken.cast(hwTokenInstance).setMac(KMByteBlob.instance(argsBuff, macOffset, macLen));
+	  boolean isHwTokenValid = validateHwToken(hwTokenInstance, scratchPad);
+	  
+	  boolean isVerificationTokenValid = false;
+	  try {
+		  short verificationTokenInstance = KMVerificationToken.instance();
+		  KMVerificationToken.cast(verificationTokenInstance).setChallenge(KMInteger.uint_64(argsBuff, verificationTokenChallengeOffset));
+		  KMVerificationToken.cast(verificationTokenInstance).setTimestamp(KMInteger.uint_64(argsBuff, verificationTokenTimeStampOffset));
+		  //Verification token in keymint does not have ParametersVerified and SecurityLevel
+		  //KMVerificationToken.cast(verificationTokenInstance).setParametersVerified(KMByteBlob.instance(argsBuff, parametersVerifiedOffset, parametersVerifiedLen));
+		  //KMVerificationToken.cast(verificationTokenInstance).setSecurityLevel(KMEnum.instance(KMType.HARDWARE_TYPE, argsBuff[verificationTokensecurityLevelOffset]));
+		  KMVerificationToken.cast(verificationTokenInstance).setMac(KMByteBlob.instance(argsBuff, verificationTokenMacOffset, verificationTokenMacLen));
+		  validateVerificationToken(verificationTokenInstance, scratchPad);
+		  isVerificationTokenValid = true;
+	  } catch(KMException e) {
+		  isVerificationTokenValid = false;
+	  } finally {
+		  KMRepository.instance().clean();
+	  }
+	  return isHwTokenValid && isVerificationTokenValid;
+  }
+  
   private boolean validateHwToken(short hwToken, byte[] scratchPad) {
     // CBOR Encoding is always big endian
     short ptr = KMHardwareAuthToken.cast(hwToken).getMac();
@@ -3415,6 +3573,61 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     KMArray.cast(resp).add((short) 2, data[KEY_CHARACTERISTICS]);
     KMArray.cast(resp).add((short) 3, data[CERTIFICATE]);
     sendOutgoing(apdu, resp);
+  }
+  
+  public short getAttestCertChainAndKey(byte[] argsBuffer, short currentTimeOffset, short expTimeOffset, byte[] outKeyAndCertBlob,
+			short outBlobOffset, short outBlobLen, short[] outLengths, byte[] scratchPad) {
+	  outLengths[(short)0] = (short)0;
+	  outLengths[(short)1] = (short)0;
+	  try {
+		  short arrPtr = KMArray.instance((short)8);
+		  KMArray keyParams = KMArray.cast(arrPtr);
+		  short tagIndex = (short)0;
+		  
+		  short byteBlob = KMByteBlob.instance((short) 2);
+		  KMByteBlob.cast(byteBlob).add((short) 0, KMType.SIGN); //Need for selfsigned certificate
+		  KMByteBlob.cast(byteBlob).add((short) 1, KMType.ATTEST_KEY);//Need for attesting certificates
+		  keyParams.add(tagIndex++, KMEnumArrayTag.instance(KMType.PURPOSE, byteBlob));
+		  keyParams.add(tagIndex++, KMIntegerTag.instance(KMType.UINT_TAG, KMType.KEYSIZE, KMInteger.uint_16((short) 256)));
+		  keyParams.add(tagIndex++, KMEnumTag.instance(KMType.ALGORITHM, KMType.EC));
+		  keyParams.add(tagIndex++, KMBoolTag.instance(KMType.NO_AUTH_REQUIRED));
+		  byteBlob = KMByteBlob.instance((short) 1);
+		  KMByteBlob.cast(byteBlob).add((short) 0, KMType.SHA2_256);
+		  keyParams.add(tagIndex++, KMEnumArrayTag.instance(KMType.DIGEST, byteBlob));
+		  keyParams.add(tagIndex++, KMEnumTag.instance(KMType.ECCURVE, KMType.P_256));
+		  short dateTag = KMInteger.uint_64(argsBuffer, currentTimeOffset);
+		  keyParams.add((short)tagIndex++, KMIntegerTag.instance(KMType.DATE_TAG, KMType.CERTIFICATE_NOT_BEFORE, dateTag));
+		  short expDateTag = KMInteger.uint_64(argsBuffer, expTimeOffset);
+		  keyParams.add((short)tagIndex++, KMIntegerTag.instance(KMType.DATE_TAG, KMType.CERTIFICATE_NOT_AFTER, expDateTag));
+		  
+		  data[KEY_PARAMETERS] = KMKeyParameters.instance(arrPtr);
+		  
+		  data[ATTEST_KEY_BLOB] = KMType.INVALID_VALUE;
+		  data[ATTEST_KEY_PARAMS] = KMType.INVALID_VALUE;
+		  data[ATTEST_KEY_ISSUER] = KMType.INVALID_VALUE;
+		
+		  //create key blob and associated attestation.
+		  generateECKeys(scratchPad);
+		  data[ORIGIN] = KMType.GENERATED;
+		  makeKeyCharacteristics(scratchPad);
+		  generateAttestation(data[ATTEST_KEY_BLOB], data[ATTEST_KEY_PARAMS],scratchPad);
+		  createEncryptedKeyBlob(scratchPad);
+		  if((short)(outBlobOffset + KMByteBlob.cast(data[KEY_BLOB]).length()) > outBlobLen) {
+			  ISOException.throwIt((short)0x6A84);
+		  }
+		  Util.arrayCopy(KMByteBlob.cast(data[KEY_BLOB]).getBuffer(), KMByteBlob.cast(data[KEY_BLOB]).getStartOff(), outKeyAndCertBlob, outBlobOffset, KMByteBlob.cast(data[KEY_BLOB]).length());
+		  outLengths[(short)0] = KMByteBlob.cast(data[KEY_BLOB]).length();
+		
+		  short certData = KMArray.cast(data[CERTIFICATE]).get((short)0);
+		  if((short)((outBlobOffset + outLengths[0]) + KMByteBlob.cast(certData).length()) > outBlobLen) {
+			  ISOException.throwIt((short)0x6A84);
+		  }
+		  Util.arrayCopy(KMByteBlob.cast(certData).getBuffer(), KMByteBlob.cast(certData).getStartOff(), outKeyAndCertBlob, (short)(outBlobOffset + outLengths[0]), KMByteBlob.cast(certData).length());
+		  outLengths[(short)1] = KMByteBlob.cast(certData).length();
+	  } finally {  
+		  KMRepository.instance().clean();
+	  }
+	  return outLengths[(short)1];
   }
 
   private short getAttestationMode(short attKeyBlob, short attChallenge){

@@ -25,8 +25,10 @@ import com.android.javacard.seprovider.KMError;
 import com.android.javacard.seprovider.KMException;
 import com.android.javacard.seprovider.KMType;
 
+import javacard.framework.AID;
 import javacard.framework.APDU;
 import javacard.framework.ISO7816;
+import javacard.framework.Shareable;
 import javacard.framework.Util;
 
 public class KMAndroidSEApplet extends KMKeymasterApplet implements OnUpgradeListener {
@@ -80,6 +82,22 @@ public class KMAndroidSEApplet extends KMKeymasterApplet implements OnUpgradeLis
    */
   public static void install(byte[] bArray, short bOffset, byte bLength) {
     new KMAndroidSEApplet().register(bArray, (short) (bOffset + 1), bArray[bOffset]);
+  }
+
+  public Shareable getShareableInterfaceObject(AID clientID, byte parameter) {
+	  
+	    byte[] tempAID = {(byte)0xA0, 0x00, 0x00, 0x00, 0x62, 0x03, 0x02, 0x0C, 0x01, 0x02, 0x03};
+
+	    if((clientID.equals(tempAID, (short)0, (byte)tempAID.length)) == false) {
+	    	return null;
+	    } else {
+	    	if(parameter == 0x00) {
+	    		return seProvider;
+	    	} else if (parameter == 0x01) {
+	    		return this;
+	    	}
+	    }
+	    return null;
   }
 
   @Override
