@@ -382,9 +382,10 @@ public class KMKeymasterApplet extends Applet implements AppletEvent, ExtendedLe
     byte apduClass = apduBuffer[ISO7816.OFFSET_CLA];
     short P1P2 = Util.getShort(apduBuffer, ISO7816.OFFSET_P1);
     // Validate APDU Header.
-    if ((apduClass != CLA_ISO7816_NO_SM_NO_CHAN)) {
-      ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
-    }
+    // Omapi works on logical channel
+    //if ((apduClass != CLA_ISO7816_NO_SM_NO_CHAN)) {
+    //  ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
+    //}
     // Validate P1P2.
     if (P1P2 != KMKeymasterApplet.KM_HAL_VERSION) {
       ISOException.throwIt(ISO7816.SW_INCORRECT_P1P2);

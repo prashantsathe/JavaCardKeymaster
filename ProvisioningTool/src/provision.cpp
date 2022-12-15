@@ -39,6 +39,11 @@ enum ProvisionStatus {
     PROVISION_STATUS_PROVISIONING_LOCKED = 0x40,
 };
 
+
+constexpr uint8_t KEYMINT_APPLET_AID[] = {0xA0, 0x00, 0x00, 0x00, 0x62, 0x03,
+                                          0x02, 0x0C, 0x01, 0x01, 0x02};
+uint8_t channelNumber;
+
 // TODO keymint provision status and lock
 std::string provisionStatusApdu = hex2str("80084000000000");
 std::string lockProvisionApdu = hex2str("80074000000000");
@@ -124,6 +129,10 @@ uint64_t unmaskPowerResetFlag(uint64_t errorCode) {
 }
 
 int provisionData(std::shared_ptr<SocketTransport>& pSocket, std::string apdu, std::vector<uint8_t>& response) {
+    printf("\n provision Data start \n");
+    uint8_t cla = apdu.at(0);
+    cla = cla | channelNumber;
+    apdu[0] = (char) cla;
     if (SUCCESS != sendData(pSocket, apdu, response)) {
         return FAILURE;
     }
@@ -169,12 +178,81 @@ int provisionData(std::shared_ptr<SocketTransport>& pSocket, const char* jsonKey
     return SUCCESS;
 }
 
+void closeChannel() {
+    std::shared_ptr<SocketTransport> pSocket = SocketTransport::getInstance();
+    uint8_t cmd[] = {0x00, 0x70, 0x80, 0x00, 0x00};
+    std::vector<uint8_t> manageChannelCommand(std::begin(cmd), std::end(cmd));
+    std::vector<uint8_t> resApduBuff;
+
+    // change class of instruction & p2 parameter
+    manageChannelCommand[0] = channelNumber;
+    // For Supplementary Channel update CLA byte according to GP
+    if ((channelNumber > 0x03) && (channelNumber < 0x14)) {
+        /* update CLA byte according to GP spec Table 11-12*/
+        manageChannelCommand[0] = 0x40 + (channelNumber - 4);
+    }
+    manageChannelCommand[3] = channelNumber;  /* Instruction parameter 2 */
+
+    pSocket->sendData(manageChannelCommand, resApduBuff);
+    if (!(resApduBuff[0] == 0x90 && resApduBuff[1] == 0x00)) {
+        printf("\nCloseChannel failed\n");
+    }
+}
+
+void selectKeyMintApplet(std::shared_ptr<SocketTransport>& pSocket) {
+    std::vector<uint8_t> resApduBuff;
+    uint8_t cmd[] = {0x00, 0x70, 0x00, 0x00, 0x01};
+    std::vector<uint8_t> manageChannelCommand(std::begin(cmd), std::end(cmd));
+    uint16_t outsize;
+    // send manage command (optional) but will need in FiRa multi-channel implementation
+    pSocket->sendData(manageChannelCommand, resApduBuff);
+    outsize = resApduBuff.size();
+    if (!(resApduBuff[outsize - 2] == 0x90 && resApduBuff[outsize - 1] == 0x00)) {
+        printf("\n Failed in Manage Channel Command\n");
+        return;
+    }
+
+    std::vector<uint8_t> selectCmd;
+    if ((resApduBuff[0] > 0x03) && (resApduBuff[0] < 0x14)) {
+        /* update CLA byte according to GP spec Table 11-12*/
+        selectCmd.push_back(0x40 + (resApduBuff[0] - 4)); /* Class of instruction */
+    } else if ((resApduBuff[0] > 0x00) && (resApduBuff[0] < 0x04)) {
+        /* update CLA byte according to GP spec Table 11-11*/
+        selectCmd.push_back((uint8_t) resApduBuff[0]); /* Class of instruction */
+    } else {
+        printf("\nInvalid Channel:%ud\n",resApduBuff[0]);
+        return;
+    }
+    channelNumber = resApduBuff[0];
+
+    // send select command
+    selectCmd.push_back((uint8_t) 0xA4); /* Instruction code */
+    selectCmd.push_back((uint8_t) 0x04);  /* Instruction parameter 1 */
+    selectCmd.push_back((uint8_t) 0x00);    /* Instruction parameter 2 */
+    selectCmd.push_back((uint8_t) sizeof(KEYMINT_APPLET_AID)); // should be fine as AID is always less than 128
+    selectCmd.insert(selectCmd.end(), std::begin(KEYMINT_APPLET_AID), std::end(KEYMINT_APPLET_AID));
+    selectCmd.push_back((uint8_t) 256);
+
+    resApduBuff.clear();
+    pSocket->sendData(selectCmd, resApduBuff);
+    outsize = resApduBuff.size();
+
+    if (!((resApduBuff[outsize - 2] == 0x90 && resApduBuff[outsize - 1] == 0x00) ||
+               (resApduBuff[outsize - 2] == 0x62) || (resApduBuff[outsize - 2] == 0x63))) {
+        // sendData response failed
+        printf("\nSelect command failed.\n");
+        return;
+    }
+    printf("\nSelect command Success\n");
+}
+
 int openConnection(std::shared_ptr<SocketTransport>& pSocket) {
     if (!pSocket->isConnected()) {
         if (!pSocket->openConnection())
             return FAILURE;
-    } else {
-        printf("\n Socket already opened.\n");
+        // send select command
+        printf("\nSelect keymint.\n");
+        selectKeyMintApplet(pSocket);
     }
     return SUCCESS;
 } 

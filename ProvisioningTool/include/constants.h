@@ -58,6 +58,10 @@ typedef UniquePtr<BIGNUM, BIGNUM_Delete> BIGNUM_Ptr;
 // EC Affine point length for Nist P256.
 constexpr uint32_t kAffinePointLength = 32;
 
+// OEM Lock / Unlock Verification message
+constexpr char kOemProvisioningLock[] = "OEM Provisioning Lock";
+constexpr char kEnableRma[] = "Enable RMA";
+
 // Tags
 constexpr uint64_t kTagAlgorithm = 268435458u;
 constexpr uint64_t kTagDigest = 536870917u;
@@ -77,6 +81,7 @@ constexpr uint64_t kCurveP256 = 1;
 constexpr uint64_t kAlgorithmEc = 3;
 constexpr uint64_t kDigestSha256 = 4;
 constexpr uint64_t kPurposeAttest = 0x7F;
+constexpr uint64_t kPurposeVerify = 3;
 constexpr uint64_t kKeyFormatRaw = 3;
 
 // json keys
@@ -91,6 +96,10 @@ constexpr char kAdditionalCertChain[] = "additional_cert_chain";
 constexpr char kSignerInfo[] = "signer_info";
 constexpr char kProvisionStatus[] = "provision_status";
 constexpr char kLockProvision[] = "lock_provision";
+constexpr char kOEMRootKey[] = "oem_root_key";
+constexpr char kSeFactoryProvisionLock[] = "se_factory_lock";
+constexpr char kUnLockProvision[] = "unlock_provision";
+constexpr char kSecureBootMode[] = "secure_boot_mode";
 
 // Instruction constatnts
 // TODO Modify according to keymint
